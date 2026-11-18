@@ -23,6 +23,7 @@ export function createPoliceCar(scene, x, z) {
   car.mesh.position.set(x, 0, z);
   scene.add(car.mesh);
   car.lost = 0; // seconds the player has stayed out of this cop's 70-unit sight radius
+  car.ramCooldown = 0; // seconds until this cop can ram the player again
   return car;
 }
 
@@ -79,8 +80,17 @@ export function updatePolice(police, dt, wantedLevel, player, playerCar) {
     car.z += Math.cos(car.heading) * car.speed * dt;
     if (dist < 4.5) {
       if (playerCar) {
-        playerCar.speed *= 0.94;
-        car.speed *= 0.9;
+        // Ram: a bump, not a per-step vice. The old code multiplied the player's speed
+        // by 0.94 on EVERY step while a cop touched the car, pinning the van at ~2 u/s
+        // forever once a cop glued to it (mission 3 was unwinnable that way). Now each
+        // cop can only bump once a second, so the player can accelerate away between
+        // bumps while the chase still feels physical.
+        car.ramCooldown = (car.ramCooldown ?? 0) - dt;
+        if (car.ramCooldown <= 0) {
+          playerCar.speed *= 0.85;
+          car.speed *= 0.9;
+          car.ramCooldown = 1.0;
+        }
       } else if (dist < WANTED.bustRadius) {
         bust = true;
       }

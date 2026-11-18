@@ -430,8 +430,11 @@ export function stepWorld(state, dt, input, camera, audio, hud) {
       state.raceRival = null;
     } else {
       rival.heading = Math.atan2(dx, dz);
-      rival.x += Math.sin(rival.heading) * 24 * dt;
-      rival.z += Math.cos(rival.heading) * 24 * dt;
+      // Rival pace: 20 u/s over its ~582-unit straight line (~29s) vs the van's ~690-unit
+      // road route at top 28 (~25-27s) — the van wins with real driving, a sedan/sport
+      // wins comfortably, and on foot (10.5) cannot. Was 30: only a sport car could win.
+      rival.x += Math.sin(rival.heading) * 20 * dt;
+      rival.z += Math.cos(rival.heading) * 20 * dt;
       syncVehicleMesh(rival);
     }
   }
