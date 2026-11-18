@@ -327,7 +327,12 @@ export function stepWorld(state, dt, input, camera, audio, hud) {
     const fixed = collideBuildings(state.city.colliders, car.x, car.z, 2.2);
     if (fixed.hit) {
       if (Math.abs(car.speed) > 12) { audio.crash(); state.particles.burst(car.x, 1, car.z, 14, 0xffaa33, 4, 0.8); }
-      car.speed *= 0.55;
+      // Wall scrape: lose speed per SECOND of contact, not per step. The old
+      // `speed *= 0.55` ran on every 1/60s step, so brushing a building pinned the
+      // car at ~0.2 u/s forever — and at that speed the steering (which scales with
+      // speed) could not turn away at all: a soft-lock. Now the car keeps enough
+      // speed to steer off the wall while the scrape still costs real pace.
+      car.speed *= Math.max(0, 1 - 0.8 * dt);
       car.x = fixed.x;
       car.z = fixed.z;
     }
