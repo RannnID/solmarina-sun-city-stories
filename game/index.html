@@ -3,17 +3,83 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Block Dodger</title>
+<title>SOLMARINA — Sun City Stories</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #11141b; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #f7b267; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
   #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  /* Read aloud, never shown: the status line screen readers announce. */
   #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .hud { position: fixed; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.7); pointer-events: none; z-index: 5; }
+  #topleft { top: 14px; left: 14px; font-size: 20px; font-weight: 700; }
+  #healthbar { width: 190px; height: 12px; background: rgba(0,0,0,.55); border: 2px solid #fff; border-radius: 6px; margin-top: 6px; }
+  #healthfill { height: 100%; width: 100%; background: linear-gradient(90deg,#37d67a,#a5e34f); border-radius: 4px; }
+  #money { margin-top: 6px; font-size: 22px; color: #7dff9a; }
+  #topright { top: 14px; right: 16px; text-align: right; }
+  #stars { font-size: 30px; letter-spacing: 4px; color: #ffd23f; }
+  #stars .dim { color: rgba(255,255,255,.35); }
+  #clock { font-size: 20px; font-weight: 700; margin-top: 2px; }
+  #day { font-size: 13px; opacity: .9; }
+  #objective { top: 12px; left: 50%; transform: translateX(-50%); text-align: center; max-width: 560px; }
+  #missionlabel { font-size: 13px; letter-spacing: 2px; color: #ffe08a; font-weight: 700; }
+  #objectivetext { font-size: 19px; font-weight: 700; margin-top: 2px; }
+  #timer { font-size: 16px; font-weight: 700; color: #ffd23f; }
+  #minimap { left: 14px; bottom: 14px; border: 2px solid rgba(255,255,255,.8); border-radius: 8px; background: rgba(10,20,30,.75); }
+  #bottomright { right: 16px; bottom: 14px; text-align: right; }
+  #speed { font-size: 34px; font-weight: 800; }
+  #speedunit { font-size: 13px; opacity: .85; }
+  #weapon { font-size: 17px; font-weight: 700; margin-top: 2px; }
+  #prompt { left: 50%; bottom: 22%; transform: translateX(-50%); font-size: 21px; font-weight: 800; background: rgba(0,0,0,.6); padding: 8px 18px; border-radius: 8px; border: 2px solid #ffd23f; display: none; }
+  #dialog { left: 50%; bottom: 120px; transform: translateX(-50%); width: 620px; max-width: 86vw; background: rgba(8,12,20,.82); border-radius: 10px; padding: 14px 18px; display: none; border-left: 6px solid #ff9f1c; }
+  #dialogname { color: #ffcf5c; font-weight: 800; font-size: 16px; }
+  #dialogtext { font-size: 17px; line-height: 1.45; margin-top: 4px; }
+  #dialoghint { font-size: 12px; opacity: .75; margin-top: 6px; }
+  #toast { left: 50%; top: 96px; transform: translateX(-50%); font-size: 20px; font-weight: 800; color: #ffe08a; display: none; text-align: center; }
+  #damage { position: fixed; inset: 0; pointer-events: none; z-index: 6; background: radial-gradient(ellipse at center, transparent 55%, rgba(255,0,0,.55) 100%); opacity: 0; }
+  #wantedflash { position: fixed; inset: 0; pointer-events: none; z-index: 6; background: radial-gradient(ellipse at center, transparent 70%, rgba(30,80,255,.35) 100%); opacity: 0; }
+  .screen { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; text-align: center; background: linear-gradient(180deg, rgba(20,30,60,.55), rgba(250,150,60,.45)); }
+  .screen h1 { font-size: 64px; margin: 0; letter-spacing: 3px; text-shadow: 0 4px 18px rgba(0,0,0,.6); }
+  .screen h2 { font-size: 20px; margin: 6px 0 18px; font-weight: 600; color: #ffe9b0; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+  .screen .panel { background: rgba(8,12,22,.78); border-radius: 12px; padding: 18px 26px; font-size: 17px; line-height: 1.7; text-align: left; }
+  .screen .keys { font-size: 14px; opacity: .9; margin-top: 14px; line-height: 1.8; }
+  .screen button { pointer-events: auto; font-size: 19px; font-weight: 800; padding: 12px 30px; margin: 6px; border-radius: 10px; border: none; cursor: pointer; background: #ff9f1c; color: #201400; }
+  .screen button.secondary { background: rgba(255,255,255,.9); color: #123; }
+  #titlescreen, #pausescreen, #overscreen { display: none; }
+  #missionlist { font-size: 15px; }
+  #missionlist b { color: #7dff9a; }
 </style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.min.js" } }
+</script>
 </head>
 <body>
-<canvas id="game" aria-label="Block Dodger: move the paddle left and right to dodge falling blocks and catch coins"></canvas>
+<canvas id="game" aria-label="Solmarina: open-world crime game. Drive, steal cars, outrun the police and finish story missions."></canvas>
 <p id="status" role="status" aria-live="polite"></p>
+<div class="hud" id="topleft"><div>SOLMARINA</div><div id="healthbar"><div id="healthfill"></div></div><div id="money">$0</div></div>
+<div class="hud" id="topright"><div id="stars"></div><div id="clock">18:24</div><div id="day">DAY 1 — SUNNY</div></div>
+<div class="hud" id="objective"><div id="missionlabel">MISSION 1/8</div><div id="objectivetext"></div><div id="timer"></div></div>
+<div class="hud" id="toast"></div>
+<canvas class="hud" id="minimap" width="200" height="200"></canvas>
+<div class="hud" id="bottomright"><div id="speed">0<span id="speedunit"> km/h</span></div><div id="weapon">FISTS</div></div>
+<div class="hud" id="prompt"></div>
+<div class="hud" id="dialog"><div id="dialogname"></div><div id="dialogtext"></div><div id="dialoghint">Press E to continue</div></div>
+<div id="damage"></div><div id="wantedflash"></div>
+<div class="screen" id="titlescreen">
+  <h1>SOLMARINA</h1><h2>Sun City Stories — an open-world crime story</h2>
+  <div class="panel"><b>NEW GAME</b> or <b>CONTINUE</b> your save.<br>
+  <span id="missionlist"></span>
+  Steal cars, outrun the Solmarina police, finish 8 story missions,<br>earn cash, buy rides &amp; guns, race the streets, find hidden packages.</div>
+  <div><button id="btn-new">NEW GAME</button><button class="secondary" id="btn-continue">CONTINUE</button></div>
+  <div class="keys">WASD move &amp; drive &nbsp;·&nbsp; Mouse camera &nbsp;·&nbsp; E enter / steal car &nbsp;·&nbsp; Shift run &nbsp;·&nbsp; Space jump / handbrake<br>Left click shoot &nbsp;·&nbsp; F punch &nbsp;·&nbsp; R reload &nbsp;·&nbsp; 1/2/3 weapons &nbsp;·&nbsp; Esc pause &nbsp;·&nbsp; M mute</div>
+</div>
+<div class="screen" id="pausescreen">
+  <h1>PAUSED</h1><h2>Solmarina waits for no one — except now.</h2>
+  <div class="panel" id="pausepanel"></div>
+  <div><button id="btn-resume">RESUME</button><button class="secondary" id="btn-quit">SAVE &amp; TITLE</button></div>
+</div>
+<div class="screen" id="overscreen">
+  <h1 id="overtitle">WASTED</h1><h2 id="oversub"></h2>
+  <div class="panel" id="overpanel"></div>
+  <div><button id="btn-retry">TRY AGAIN</button><button class="secondary" id="btn-title2">TITLE SCREEN</button></div>
+</div>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>

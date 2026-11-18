@@ -1,0 +1,92 @@
+// The Solmarina police: black-and-white patrol cars with flashing light bars that spawn at
+// the city edge when the player is wanted, chase the player, ram to slow them down, and bust
+// the player on foot when they get close. Siren lights blink red and blue on a timer.
+import * as THREE from 'three';
+import { WANTED } from './config.js';
+import { createVehicle, createVehicleMesh, syncVehicleMesh } from './vehicles.js';
+
+export function createPoliceCar(scene, x, z) {
+  const car = createVehicle('sedan', x, z, 0, 0x11151c);
+  car.mesh = createVehicleMesh('sedan', 0x11151c);
+  const door = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.5, 2.02), new THREE.MeshLambertMaterial({ color: 0xf8f9fa }));
+  door.position.set(0, 0.62, 0);
+  car.mesh.add(door);
+  car.lightbar = new THREE.Group();
+  const red = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.22, 0.5), new THREE.MeshBasicMaterial({ color: 0xff2020 }));
+  red.position.set(0.3, 1.55, 0);
+  const blue = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.22, 0.5), new THREE.MeshBasicMaterial({ color: 0x2040ff }));
+  blue.position.set(-0.3, 1.55, 0);
+  car.lightbar.add(red);
+  car.lightbar.add(blue);
+  car.lightbar.userData = { red, blue };
+  car.mesh.add(car.lightbar);
+  car.mesh.position.set(x, 0, z);
+  scene.add(car.mesh);
+  return car;
+}
+
+export function createPolice(scene) {
+  return { scene, cars: [], spawnTimer: 0, blink: 0 };
+}
+
+// Spawn enough patrol cars for the wanted level, at road positions away from the player.
+export function startPolicePursuit(police, wantedLevel, playerX, playerZ, random) {
+  const want = WANTED.maxCops[wantedLevel] || 0;
+  while (police.cars.length < want) {
+    const angle = random() * Math.PI * 2;
+    const dist = 90 + random() * 60;
+    const x = Math.max(-290, Math.min(290, playerX + Math.cos(angle) * dist));
+    const z = Math.max(-290, Math.min(290, playerZ + Math.sin(angle) * dist));
+    police.cars.push(createPoliceCar(police.scene, x, z));
+  }
+  while (police.cars.length > want) {
+    const car = police.cars.pop();
+    police.scene.remove(car.mesh);
+  }
+}
+
+export function stopPolicePursuit(police) {
+  for (const car of police.cars) police.scene.remove(car.mesh);
+  police.cars.length = 0;
+}
+
+// Chase: steer toward the player, ram on contact, blink the light bar. Returns true when a
+// cop is close enough on foot to bust the player.
+export function updatePolice(police, dt, wantedLevel, player, playerCar) {
+  police.blink += dt;
+  const phase = Math.floor(police.blink * 4) % 2 === 0;
+  const targetX = playerCar ? playerCar.x : player.x;
+  const targetZ = playerCar ? playerCar.z : player.z;
+  const top = WANTED.copSpeed[wantedLevel] || 0;
+  let bust = false;
+  for (const car of police.cars) {
+    const dx = targetX - car.x;
+    const dz = targetZ - car.z;
+    const dist = Math.hypot(dx, dz) || 0.001;
+    const wantHeading = Math.atan2(dx, dz);
+    let dh = wantHeading - car.heading;
+    while (dh > Math.PI) dh -= Math.PI * 2;
+    while (dh < -Math.PI) dh += Math.PI * 2;
+    car.heading += Math.max(-2.2 * dt, Math.min(2.2 * dt, dh * 3 * dt));
+    car.speed += ((dist > 12 ? top : top * 0.7) - car.speed) * dt * 0.8;
+    car.x += Math.sin(car.heading) * car.speed * dt;
+    car.z += Math.cos(car.heading) * car.speed * dt;
+    if (dist < 4.5) {
+      if (playerCar) {
+        playerCar.speed *= 0.94;
+        car.speed *= 0.9;
+      } else if (dist < WANTED.bustRadius) {
+        bust = true;
+      }
+    }
+    const { red, blue } = car.lightbar.userData;
+    red.material.color.setHex(phase ? 0xff2020 : 0x550000);
+    blue.material.color.setHex(phase ? 0x101080 : 0x2040ff);
+    syncVehicleMesh(car);
+  }
+  return bust;
+}
+
+export function policePositions(police) {
+  return police.cars.map((c) => ({ x: c.x, z: c.z }));
+}
