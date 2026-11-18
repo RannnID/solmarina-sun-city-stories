@@ -15,9 +15,9 @@ export function createRenderer(canvas) {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(PALETTE.sky);
-  scene.fog = new THREE.Fog(PALETTE.fog, 220, 700);
+  scene.fog = new THREE.Fog(PALETTE.fog, 300, 900);
 
-  const sun = new THREE.DirectionalLight(PALETTE.sun, 2.4);
+  const sun = new THREE.DirectionalLight(PALETTE.sun, 2.6);
   sun.position.set(-180, 140, 120);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -27,8 +27,10 @@ export function createRenderer(canvas) {
   sun.shadow.camera.bottom = -260;
   sun.shadow.camera.far = 700;
   scene.add(sun);
-  const hemi = new THREE.HemisphereLight(0xffe0b3, 0x8a7a5a, 1.1);
+  const hemi = new THREE.HemisphereLight(0xffe0b3, 0x8a7a5a, 1.5);
   scene.add(hemi);
+  const ambient = new THREE.AmbientLight(0xffd9a0, 0.35);
+  scene.add(ambient);
 
   const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 1200);
   camera.position.set(0, 8, 14);

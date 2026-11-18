@@ -44,7 +44,7 @@ export const START_POS = { x: 0, z: 120 };
 
 export const PALETTE = {
   sky: 0xffd9a0, sun: 0xffe3b3, fog: 0xf2b880,
-  road: 0x3c3f46, sidewalk: 0xb8a88f, sand: 0xe8cf9e, ocean: 0x2e7fa8,
+  road: 0x4a4e57, sidewalk: 0xb8a88f, sand: 0xe8cf9e, ocean: 0x2e7fa8,
   grass: 0x7fae5a, building: [0xe8b48a, 0xd98c6a, 0xc9a06a, 0x9fb4c7, 0xe0d0b0, 0xb07a5a],
 };
 

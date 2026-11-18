@@ -133,6 +133,7 @@ function runShot(name) {
       renderer.camera.position.set(120, 170, 330);
       renderer.camera.lookAt(0, 20, -60);
     } else {
+      camera.snap(target, !!world.player.inCar);
       camera.update(1 / 60, target, world.player.inCar ? Math.abs(world.player.inCar.speed) : 0, !!world.player.inCar);
     }
     hud.update(world, now);

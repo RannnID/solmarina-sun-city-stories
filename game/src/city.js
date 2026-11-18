@@ -86,6 +86,56 @@ export function buildCity(scene, random) {
     group.add(box(3, 2.5, 3, 0x8a8f98, s.x + s.w * 0.2, s.h + 1.2, s.z));
   });
 
+  // Windows: one instanced mesh of small dark panes on the south face of each building, a
+  // few of them warm-lit, so the slabs read as buildings instead of flat boxes.
+  const winGeo = new THREE.BoxGeometry(1.6, 2.2, 0.15);
+  const winMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+  const winCount = spots.reduce((n, s) => n + Math.min(4, Math.floor(s.h / 7)) * 2, 0);
+  const wins = new THREE.InstancedMesh(winGeo, winMat, winCount);
+  const wcol = new THREE.Color();
+  let wi = 0;
+  spots.forEach((s) => {
+    const floors = Math.min(4, Math.floor(s.h / 7));
+    for (let f = 0; f < floors; f += 1) {
+      for (let cxi = 0; cxi < 2; cxi += 1) {
+        const wx = s.x - s.w * 0.22 + cxi * s.w * 0.44;
+        const wy = 4 + f * 6;
+        const wz = s.z + s.d / 2 + 0.1;
+        m4.makeScale(1, 1, 1);
+        m4.setPosition(wx, wy, wz);
+        wins.setMatrixAt(wi, m4);
+        wcol.setHex(random() < 0.22 ? 0xffd97a : 0x2b3542);
+        wins.setColorAt(wi, wcol);
+        wi += 1;
+      }
+    }
+  });
+  wins.instanceMatrix.needsUpdate = true;
+  if (wins.instanceColor) wins.instanceColor.needsUpdate = true;
+  group.add(wins);
+
+  // Road centre dashes: one instanced mesh along every road, skipping intersections.
+  const dashGeo = new THREE.BoxGeometry(0.3, 0.06, 2.2);
+  const dashMat = new THREE.MeshBasicMaterial({ color: 0xd8d2c0 });
+  const dashSpots = [];
+  for (let i = 0; i < CITY.blocks; i += 1) {
+    const c = CITY.roadAt(i);
+    for (let v = -CITY.half + 8; v < CITY.half - 8; v += 11) {
+      if (Math.abs(v - Math.round(v / 60) * 60) < 9) continue;
+      dashSpots.push({ x: c, z: v, rot: 0 });
+      dashSpots.push({ x: v, z: c, rot: Math.PI / 2 });
+    }
+  }
+  const dashes = new THREE.InstancedMesh(dashGeo, dashMat, dashSpots.length);
+  const rot = new THREE.Matrix4();
+  dashSpots.forEach((d, i) => {
+    rot.makeRotationY(d.rot);
+    rot.setPosition(d.x, 0.06, d.z);
+    dashes.setMatrixAt(i, rot);
+  });
+  dashes.instanceMatrix.needsUpdate = true;
+  group.add(dashes);
+
   // Solmarina Tower — the landmark, north centre, tall and warm gold.
   const tower = box(22, 90, 22, 0xe8a34c, 0, 45, -240);
   group.add(tower);

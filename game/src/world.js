@@ -168,7 +168,8 @@ export function setupStep(state, step) {
   if (step.kind === 'kill') {
     const spots = [];
     for (let i = 0; i < step.count; i += 1) {
-      spots.push({ x: step.at.x + (state.random() - 0.5) * 30, z: step.at.z + (state.random() - 0.5) * 30 });
+      // Keep enemies on the road around the fight spot, never inside a building.
+      spots.push({ x: step.at.x + (state.random() - 0.5) * 11, z: step.at.z + (state.random() - 0.5) * 11 });
     }
     spawnEnemies(state.combat, spots, 'vulture');
   }

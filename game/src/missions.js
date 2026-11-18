@@ -197,7 +197,7 @@ export function stepLabel(missions) {
   if (step.kind === 'deliver') return `Deliver package ${missions.delivered + 1} of ${step.points.length} — ${Math.ceil(missions.timer)}s left`;
   if (step.kind === 'collect') return `Grab the cash bags at the stash house (${missions.collected}/${step.count})`;
   if (step.kind === 'kill') return step.label;
-  if (step.kind === 'race' || step.kind === 'escape') return `${step.label} — ${Math.ceil(missions.timer)}s`;
+  if (step.kind === 'race') return `${step.label} — ${Math.ceil(missions.timer)}s`;
   return step.label;
 }
 

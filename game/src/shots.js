@@ -3,7 +3,8 @@
 // then drives it forward a fixed number of steps with a scripted input, so the same seed
 // always gives the same frame. No mockups: every pixel comes from the game itself.
 import { STEP } from './config.js';
-import { startMission, setupStep, currentStep } from './world.js';
+import { setupStep } from './world.js';
+import { currentStep, startMission } from './missions.js';
 import { createVehicle, createVehicleMesh } from './vehicles.js';
 import { addCrime } from './wanted.js';
 import { startPolicePursuit } from './police.js';
@@ -56,6 +57,16 @@ export function stageShot(name, world, camera, audio, hud, stepWorldFn) {
     if (state.police.cars[1]) { state.police.cars[1].x = 5; state.police.cars[1].z = 116; state.police.cars[1].heading = 0; state.police.cars[1].speed = 29; }
     camera.setYaw(Math.PI);
     for (let i = 0; i < 150; i += 1) stepWorldFn(state, STEP, SCRIPTED_INPUT, camera, audio, hud);
+    // Park both patrol cars just behind the player's car so the chase reads in one frame.
+    const pc = state.player.inCar;
+    if (state.police.cars[0]) {
+      state.police.cars[0].x = pc.x - 4; state.police.cars[0].z = pc.z - 11;
+      state.police.cars[0].heading = pc.heading; state.police.cars[0].speed = pc.speed * 0.9;
+    }
+    if (state.police.cars[1]) {
+      state.police.cars[1].x = pc.x + 6; state.police.cars[1].z = pc.z - 6;
+      state.police.cars[1].heading = pc.heading; state.police.cars[1].speed = pc.speed * 0.85;
+    }
     return { mode: 'chase', dialog: null };
   }
   if (name === 'walk') {
@@ -67,6 +78,18 @@ export function stageShot(name, world, camera, audio, hud, stepWorldFn) {
     state.player.z = 118;
     state.player.heading = Math.PI / 2;
     state.player.mesh.position.set(9, 0, 118);
+    // A parked sedan right beside the player, in frame, and three pedestrians nearby.
+    const near = createVehicle('sedan', 12, 115, Math.PI / 2, 0x2a9d8f);
+    near.mesh = createVehicleMesh('sedan', 0x2a9d8f);
+    near.mesh.position.set(near.x, 0, near.z);
+    near.mesh.rotation.y = near.heading;
+    state.scene.add(near.mesh);
+    state.parked.push(near);
+    const pedSpots = [[16, 108], [2, 126], [20, 122]];
+    pedSpots.forEach(([x, z], i) => {
+      const ped = state.crowd.peds[i];
+      if (ped) { ped.x = x; ped.z = z; ped.mesh.position.set(x, 0, z); }
+    });
     state.missions.index = 0;
     startMission(state.missions);
     setupStep(state, currentStep(state.missions));
@@ -83,11 +106,13 @@ export function stageShot(name, world, camera, audio, hud, stepWorldFn) {
     startMission(state.missions);
     const step = currentStep(state.missions);
     setupStep(state, step);
-    state.player.x = 210;
-    state.player.z = 210;
+    // Stand on the road at the Marina Point intersection, facing the stash and the Vultures.
+    state.player.x = 232;
+    state.player.z = 222;
     state.player.heading = Math.PI * 0.25;
-    state.player.mesh.position.set(210, 0, 210);
-    camera.setYaw(Math.PI * 1.25);
+    state.player.mesh.position.set(232, 0, 222);
+    // Camera northwest of the player, looking southeast at the stash and the enemies.
+    camera.setYaw(Math.PI * 0.25);
     for (let i = 0; i < 60; i += 1) stepWorldFn(state, STEP, IDLE_INPUT, camera, audio, hud);
     return {
       mode: 'mission',
