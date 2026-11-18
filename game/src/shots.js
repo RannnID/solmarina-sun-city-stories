@@ -61,14 +61,18 @@ export function stageShot(name, world, camera, audio, hud, stepWorldFn) {
     for (let i = 0; i < 150; i += 1) stepWorldFn(state, STEP, SCRIPTED_INPUT, camera, audio, hud);
     // Park both patrol cars just behind the player's car, between the camera and the
     // player, so the chase reads in one frame: cops closing in from behind.
+    // (The camera snap resets to ~11 units behind the player every paint, so a cop
+    // parked 9+ units behind the player sits ~2 units from the lens and renders as
+    // a cropped black blob. Bumper-to-bumper at 5.5/6.5 keeps both patrol cars
+    // fully in frame and clearly readable as police.)
     const pc = state.player.inCar;
     if (state.police.cars[0]) {
-      state.police.cars[0].x = pc.x - 4; state.police.cars[0].z = pc.z - 9;
+      state.police.cars[0].x = pc.x - 3.2; state.police.cars[0].z = pc.z - 5.5;
       state.police.cars[0].heading = pc.heading; state.police.cars[0].speed = pc.speed * 0.9;
       syncVehicleMesh(state.police.cars[0]);
     }
     if (state.police.cars[1]) {
-      state.police.cars[1].x = pc.x + 5; state.police.cars[1].z = pc.z - 6;
+      state.police.cars[1].x = pc.x + 3.2; state.police.cars[1].z = pc.z - 6.5;
       state.police.cars[1].heading = pc.heading; state.police.cars[1].speed = pc.speed * 0.85;
       syncVehicleMesh(state.police.cars[1]);
     }
