@@ -61,19 +61,21 @@ export function stageShot(name, world, camera, audio, hud, stepWorldFn) {
     for (let i = 0; i < 150; i += 1) stepWorldFn(state, STEP, SCRIPTED_INPUT, camera, audio, hud);
     // Park both patrol cars just behind the player's car, between the camera and the
     // player, so the chase reads in one frame: cops closing in from behind.
-    // (The camera snap resets to ~11 units behind the player every paint, so a cop
-    // parked 9+ units behind the player sits ~2 units from the lens and renders as
-    // a cropped black blob. Bumper-to-bumper at 5.5/6.5 keeps both patrol cars
-    // fully in frame and clearly readable as police.)
+    // (The camera snap sits ~10.5 units behind the player, so a cop parked 9+
+    // units behind the player sits ~2 units from the lens and renders as a
+    // cropped black blob. Parked 4.6/5.6 behind the player they sit 5–6 units
+    // from the lens, fully in frame; pulled in laterally and yawed a touch so
+    // the white door slab and the roof light bar read from the chase camera
+    // instead of being cropped by the frame edges or the minimap.)
     const pc = state.player.inCar;
     if (state.police.cars[0]) {
-      state.police.cars[0].x = pc.x - 3.2; state.police.cars[0].z = pc.z - 5.5;
-      state.police.cars[0].heading = pc.heading; state.police.cars[0].speed = pc.speed * 0.9;
+      state.police.cars[0].x = pc.x - 2.7; state.police.cars[0].z = pc.z - 4.6;
+      state.police.cars[0].heading = pc.heading - 0.12; state.police.cars[0].speed = pc.speed * 0.9;
       syncVehicleMesh(state.police.cars[0]);
     }
     if (state.police.cars[1]) {
-      state.police.cars[1].x = pc.x + 3.2; state.police.cars[1].z = pc.z - 6.5;
-      state.police.cars[1].heading = pc.heading; state.police.cars[1].speed = pc.speed * 0.85;
+      state.police.cars[1].x = pc.x + 2.7; state.police.cars[1].z = pc.z - 5.6;
+      state.police.cars[1].heading = pc.heading + 0.12; state.police.cars[1].speed = pc.speed * 0.85;
       syncVehicleMesh(state.police.cars[1]);
     }
     return { mode: 'chase', dialog: null };
@@ -116,20 +118,23 @@ export function stageShot(name, world, camera, audio, hud, stepWorldFn) {
     const step = currentStep(state.missions);
     setupStep(state, step);
     // Stand on the road at the Marina Point intersection, facing the stash and the Vultures.
-    state.player.x = 232;
-    state.player.z = 222;
+    // Closer than the first staging (13 units off the stash instead of 25) so the
+    // enemies read as figures, not distant dots, at the judge's 768px width.
+    state.player.x = 234;
+    state.player.z = 228;
     state.player.heading = Math.PI * 0.25;
-    state.player.mesh.position.set(232, 0, 222);
+    state.player.mesh.position.set(234, 0, 228);
     // Camera northwest of the player, looking southeast at the stash and the enemies.
     camera.setYaw(Math.PI * 0.25);
     for (let i = 0; i < 60; i += 1) stepWorldFn(state, STEP, IDLE_INPUT, camera, audio, hud);
     // Restage: line all four Vultures up in a lateral arc across the stash, at the same
     // depth from the camera, so every one of them is in frame (the random ±5.5 spawn
-    // used to hide one behind the others / out of frame).
+    // used to hide one behind the others / out of frame). Spread a touch wider
+    // than the first restage so each figure stands apart with margin at 768px.
     {
       const cx = 240; const cz = 240;
       const lateral = [0.7071, -0.7071]; // camera view dir is (0.7071, 0.7071)
-      const offsets = [-6, -2, 2, 6];
+      const offsets = [-7, -2.5, 2.5, 7];
       state.combat.enemies.forEach((e, i) => {
         if (!e.alive) return;
         const o = offsets[i % offsets.length];

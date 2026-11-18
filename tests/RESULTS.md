@@ -77,6 +77,126 @@ the game engine) played missions 1–8 end to end, 0 console errors:
   250 + 600 + 800 + 1,000 + 1,200 + 1,500 + 2,000 + 3,000 + 5,000 + 3×$200.
 - **Console errors for the whole run: 0.**
 
+## Polish round 2026-11-18 ~23:30 WIB (this session: wall-scrape polish, cover + mission restage, 2 new playtest checks)
+
+All edits in this session are real code/staging changes, not touches:
+
+- **Wall scrape (`game/src/world.js` + `game/src/audio.js`):** the collision
+  response now uses the wall normal from the push-out vector. A glancing scrape
+  (heading nearly parallel to the wall) costs only 0.25/s of speed, so the car
+  slides along the wall; a square hit costs up to 1.6/s and still triggers the
+  crash sound + burst above 12 u/s. While scraping, orange spark bursts fire at
+  the contact point plus a new `audio.scrape()` friction rasp (band-passed noise,
+  throttled to one burst per 0.12 s). `state.scrapeTimer` was added to the world
+  state for the throttle.
+- **Cover restage (`game/src/shots.js`):** the two patrol cars moved from
+  5.5/6.5 units behind the player car (±3.2 sideways) to 4.6/5.6 behind (±2.7),
+  each yawed ±0.12 rad, so both sit fully in frame with roof light bar + white
+  door slab readable instead of being cropped by the frame edges / minimap.
+- **Mission-shot restage (`game/src/shots.js`):** the player now stands 13 units
+  off the stash instead of 25, and the four Vultures are spread on a wider arc
+  (offsets -7/-2.5/2.5/7 instead of -6/-2/2/6) so each figure stands apart with
+  margin.
+
+### Playtest run 2026-11-18 ~23:32 WIB (26 checks, 2 new)
+
+`node tests/playtest.cjs` from the repo root, **26/26 checks passed, zero console
+errors**. Numbers from this run: walk 4.3 units, drive 7.8 units, pistol 24 -> 21
+ammo, money $850, continue restores $850 -> $850, minimap 13,816 non-background
+pixels. The two new checks:
+
+| # | Check | Result |
+|---|-------|--------|
+| 25 | Building scrape keeps speed, car slides along wall (no soft-lock) | PASS — speed=34, travel=145.4, xOff=1.5 |
+| 26 | Heat decays while police can see player (M3 escape) | PASS — heat=43.9 (from 45, cop parked 5 units away) |
+
+(One intermediate run failed the police-spawn check at 25/26: the 6 s scrape drive
+is long enough for the small post-theft heat (12) to cool below 4, which
+legitimately clears the wanted level, so no cops were left to spawn. The scrape
+check was moved to run after the police check, with a comment explaining why;
+the heat check now raises the heat itself and waits for the pursuit to spawn
+before parking a cop next to the player, so it proves the visible-decay branch
+no matter what the earlier checks left behind.)
+
+### Scrape live proof (separate driver, `/tmp/scrape-verify.cjs`, this session)
+
+A stolen sedan was parked against a long building face (west face at
+x=-230.0, car at x=-232.1, heading +z) and driven with W held for 8 s, two runs:
+
+- Run 1: speed 6.6 -> 12.4 -> 17.8 -> 28.5 -> 34 (top), travel **152.7 units**,
+  xOff from the wall face 1.5, live spark/dust particles 0 before the scrape ->
+  10/30/20/5/6/5/3/6 during it, 0 console errors.
+- Run 2: same wall, travel **183.9 units**, final speed 34, xOff 1.5, live
+  particles 0 -> 12/36/96/7/4/2/3/3, 0 console errors.
+- The scrape screenshots from this driver are NOT usable as visual proof: the
+  chase camera had not settled after the teleport (it was still lerping from the
+  steal position, and the title-screen click had orbited its yaw), so the car is
+  out of frame in both shots. The particle counts above — sampled live from the
+  THREE.Points cloud — are the evidence that sparks fire during a scrape. The
+  scrape sound hook runs without errors (headless Chrome has no user gesture, so
+  no audible output is verifiable headless, same as all other game audio).
+
+### Screenshots re-rendered 2026-11-18 ~23:35 WIB
+
+`?shot=chase|mission&seed=1`, 0 errors, deterministic; both read back by the
+polish agent at full size, the cover also at 768x480:
+
+- **1-cover.jpg** (75,410 bytes): both patrol cars fully in frame, red+blue roof
+  light bars and white door slabs readable on each; the red player car drives
+  away from the lens with both cops closing in from behind. At 768x480 the chase
+  still reads: red car centre, black patrol cars flanking it, HUD legible.
+  (Residual nit: the left cop's lower half sits behind the minimap — its roof,
+  light bar and door still read; moving it further right would crowd the player
+  car.)
+- **3-mission.jpg** (84,617 bytes): all four Vultures in frame with margin,
+  visibly larger and more distinct than the previous staging; player closer to
+  the stash; Kade Voss dialog fully readable; the "New objective" toast still
+  wraps to two lines but stays readable and does not cover any enemy.
+
+### Live end-to-end run 2026-11-18 ~23:45 WIB (all 8 missions, real input, this session)
+
+Same driver design as the 16:20 run (`/tmp/polish-verify2.cjs`, puppeteer-core,
+real keyboard input, teleports only to reposition; every step completion decided
+by the game engine), re-run on the polished code. **0 console errors.**
+
+- **M1** complete; **M2** complete in the van ($850 -> $1,650).
+- **M3 escape, natural, in the van, no teleport:** garage (65.5, 90) -> hideout
+  (-181.7, -109) in **35 s wall**; heat 44.8 -> 0, wanted level 2 -> 0,
+  money $1,650 -> $2,650. (The first driver attempt this session also completed
+  M3 naturally in 32 s wall before its M5 section stalled — see the M5 note below.)
+- **M4** complete: 3/3 packages delivered, money $2,650 -> $3,850.
+- **M5 kill step, live gunfire:** the camera's forward bearing was calibrated
+  with the improved probe (see note) — **300° at 2.5 units** (placed-enemy hp
+  60 -> 8 on the probe). Then the pistol killed all **4/4 Vultures**: 6 bursts,
+  **ammo 24 -> 4**, 16 s wall, enemies 4 -> 0, kill step completed,
+  money $3,850 -> $5,350. No fists used.
+- **M6 race, natural, in the van, attempt 1:** tower (0, -240) -> pier in
+  **38 s wall**; pier distance 582 -> 16, rival distance 575 -> 64, timer
+  74.8 -> ~50 (about 25 s of the 75 s limit used), money $5,350 -> $7,350.
+- **M7** complete: money $7,350 -> $10,950 (3 money bags, +$600).
+- **M8** complete: kill step by fists (30 punches, 15 s wall, health 100 -> 60),
+  final goto to the pier, **STORY FINISHED, final money $15,950** — exactly
+  250 + 600 + 800 + 1,000 + 1,200 + 1,500 + 2,000 + 3,000 + 5,000 + 3×$200.
+- **Console errors for the whole run: 0.**
+
+#### M5 driver note (verification tooling, not a game bug)
+
+The first driver attempt this session stalled at M5: its calibration accepted a
+hit on *any* enemy, found bearing 0° from a single graze, and then missed the
+placed enemy 61 bursts in a row before being stopped. Root cause is in the
+shooting geometry (`game/src/combat.js` raycasts from the camera through the
+crosshair): the ray descends to the look target (player + 1.4y), so an enemy
+4 units beyond the player sits near/below the ray and only grazes, and whether
+a bearing hits depends on the camera pitch left over from the title-screen
+click, which varies per run (300° in the 16:20 run and again here, 0° in the
+stalled run). The driver was hardened instead of touching the game: calibration
+now requires the *placed* enemy's hp to drop, tries distances 2.5 and 4 units
+per bearing, and re-calibrates after 3 consecutive no-damage bursts. With that,
+the re-run found 300° at 2.5 units on the first sweep and killed 4/4 in 6 bursts
+with no re-calibration. No game code was changed for this; the pistol kill is a
+real, reproducible path, just a pitch-sensitive one for a driver that cannot
+see the crosshair.
+
 ## Bugs found and fixed by this playtest
 
 - `frame()` consumed every one-shot action before `stepWorld` saw it, so E never

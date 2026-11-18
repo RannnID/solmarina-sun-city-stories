@@ -116,5 +116,26 @@ export function createAudio() {
     missionDone() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, 0.22, 'triangle', 0.22), i * 110)); },
     wantedUp() { blip(220, 0.2, 'sawtooth', 0.2); setTimeout(() => blip(180, 0.25, 'sawtooth', 0.2), 130); },
     crash() { blip(70, 0.25, 'square', 0.3); },
+    scrape() {
+      // Short friction rasp for a wall scrape: filtered noise, quieter and
+      // shorter than a gunshot, throttled by the caller so a long slide reads
+      // as a continuous scrape instead of one blast per frame.
+      if (!ensure() || muted || ctx.state !== 'running') return;
+      const len = ctx.sampleRate * 0.09;
+      const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < len; i += 1) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 900;
+      const gain = ctx.createGain();
+      gain.gain.value = 0.22;
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(master);
+      src.start();
+    },
   };
 }

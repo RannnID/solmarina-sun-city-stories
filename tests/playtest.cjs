@@ -80,6 +80,57 @@ async function main() {
   await sleep(2500);
   check('police cars spawn and chase', await state(`window.__solmarina.world.police.cars.length >= 1`), await state(`'cops=' + window.__solmarina.world.police.cars.length`));
 
+  // Building scrape (P0 fix): a car grinding along a wall must keep its speed and
+  // slide along it instead of being pinned — the old per-step 0.55 multiplier
+  // soft-locked the car at ~0.2 u/s. Pick a long building face at runtime, park
+  // the car against it heading parallel to the wall, hold W and measure.
+  // (Runs after the police check on purpose: the 6s scrape drive is long enough
+  // for the small post-theft heat (12) to cool below 4, which legitimately clears
+  // the wanted level and would leave no cops for the check above.)
+  const wall = await state(`(() => { const w = window.__solmarina.world; const cs = w.city.colliders;
+    let best = null;
+    for (const c of cs) {
+      if (c.maxZ - c.minZ < 25) continue;
+      const x = c.minX - 2.05; const z0 = (c.minZ + c.maxZ) / 2;
+      let clear = true;
+      for (const o of cs) {
+        if (o === c) continue;
+        if (x > o.minX - 2.5 && x < o.maxX + 2.5 && z0 + 28 > o.minZ - 2.5 && z0 - 5 < o.maxZ + 2.5) { clear = false; break; }
+      }
+      if (clear) { best = { x, z: z0, minX: c.minX }; break; }
+    }
+    if (!best) return null;
+    const car = w.player.inCar; car.x = best.x; car.z = best.z; car.heading = 0; car.speed = 0;
+    car.mesh.position.set(car.x, 0, car.z); car.mesh.rotation.y = car.heading - Math.PI / 2;
+    return best; })()`);
+  let scrapeDetail = 'no long wall face found';
+  if (wall) {
+    const s0 = await state(`({x: window.__solmarina.world.player.inCar.x, z: window.__solmarina.world.player.inCar.z})`);
+    await page.keyboard.down('KeyW');
+    await sleep(6000);
+    await page.keyboard.up('KeyW');
+    const s1 = await state(`(() => { const c = window.__solmarina.world.player.inCar; return { speed: +c.speed.toFixed(1), x: +c.x.toFixed(1), z: +c.z.toFixed(1) }; })()`);
+    const travel = Math.hypot(s1.x - s0.x, s1.z - s0.z);
+    scrapeDetail = `speed=${s1.speed} travel=${travel.toFixed(1)} xOff=${Math.abs(s1.x - (wall.minX - 2.2)).toFixed(1)}`;
+    check('building scrape keeps speed, car slides along wall (no soft-lock)', s1.speed > 8 && travel > 12 && Math.abs(s1.x - (wall.minX - 2.2)) < 2.5, scrapeDetail);
+  } else {
+    check('building scrape keeps speed, car slides along wall (no soft-lock)', false, scrapeDetail);
+  }
+
+  // M3 escape fix (P0): heat must decay even while a cop can see the player — the
+  // old code froze heat whenever a cop was within 70 units, so mission 3 could
+  // never end in the van. Raise the heat, let the pursuit spawn, park a cop next
+  // to the player (visible branch) and watch the heat fall. Afterwards the cop
+  // is sent far away and the heat reset to the normal post-theft level, so the
+  // on-foot exit below is not an instant bust.
+  await state(`(() => { const w = window.__solmarina.world; w.wanted.heat = 45; w.wanted.level = 2; })()`);
+  await sleep(1500);
+  await state(`(() => { const w = window.__solmarina.world; const cop = w.police.cars[0]; const p = w.player.inCar || w.player; if (cop) { cop.x = p.x + 5; cop.z = p.z + 5; } })()`);
+  await page.waitForFunction(`window.__solmarina.world.wanted.heat < 44`, { timeout: 60000 }).catch(() => {});
+  check('heat decays while police can see player (M3 escape)', await state(`window.__solmarina.world.wanted.heat < 44`), await state(`'heat=' + window.__solmarina.world.wanted.heat.toFixed(1)`));
+  await state(`(() => { const w = window.__solmarina.world; for (const c of w.police.cars) { c.x += 200; c.z += 200; } w.wanted.heat = 12; w.wanted.level = 1; })()`);
+  await sleep(500);
+
   // 7. Exit the car, then complete mission 1 by driving the car to the pier.
   await page.keyboard.press('KeyE');
   await page.waitForFunction(`window.__solmarina.world.player.inCar === null`, { timeout: 10000 }).catch(() => {});

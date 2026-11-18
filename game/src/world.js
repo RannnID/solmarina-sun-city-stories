@@ -64,7 +64,7 @@ export function createWorld(scene, random) {
     ownedCars: [], weaponsOwned: ['fists'], raceWins: 0, day: 1,
     clock: 18 * 3600 + 24 * 60, elapsed: 0, damageFlash: 0,
     dialog: null, shopOpen: false, raceRival: null, cashBags: [],
-    nextMissionDelay: -1, healthRegen: 0, radioTimer: 20, radioIndex: 0,
+    nextMissionDelay: -1, healthRegen: 0, radioTimer: 20, radioIndex: 0, scrapeTimer: 0,
   };
   return state;
 }
@@ -326,15 +326,35 @@ export function stepWorld(state, dt, input, camera, audio, hud) {
     const moved = driveVehicle(car, dt, move.f, -move.s, (actions & 4) !== 0);
     const fixed = collideBuildings(state.city.colliders, car.x, car.z, 2.2);
     if (fixed.hit) {
-      if (Math.abs(car.speed) > 12) { audio.crash(); state.particles.burst(car.x, 1, car.z, 14, 0xffaa33, 4, 0.8); }
-      // Wall scrape: lose speed per SECOND of contact, not per step. The old
-      // `speed *= 0.55` ran on every 1/60s step, so brushing a building pinned the
-      // car at ~0.2 u/s forever — and at that speed the steering (which scales with
-      // speed) could not turn away at all: a soft-lock. Now the car keeps enough
-      // speed to steer off the wall while the scrape still costs real pace.
-      car.speed *= Math.max(0, 1 - 0.8 * dt);
+      // Wall normal from the push-out vector; how head-on the impact is decides
+      // the cost. A glancing scrape (heading nearly parallel to the wall) barely
+      // costs speed, so the car slides along the wall; a square hit still scrubs
+      // pace hard. The old flat `speed *= 0.55` per step pinned the car at
+      // ~0.2 u/s forever — and at that speed the steering (which scales with
+      // speed) could not turn away at all: a soft-lock.
+      const pushX = fixed.x - car.x;
+      const pushZ = fixed.z - car.z;
+      const pushLen = Math.hypot(pushX, pushZ) || 0.001;
+      const nx = pushX / pushLen;
+      const nz = pushZ / pushLen;
+      const intoWall = -(Math.sin(car.heading) * nx + Math.cos(car.heading) * nz);
+      const headOn = Math.max(0, Math.min(1, intoWall));
+      if (Math.abs(car.speed) > 12 && headOn > 0.5) { audio.crash(); state.particles.burst(car.x, 1, car.z, 14, 0xffaa33, 4, 0.8); }
+      car.speed *= Math.max(0, 1 - (0.25 + 1.35 * headOn) * dt);
       car.x = fixed.x;
       car.z = fixed.z;
+      // Visible + audible scrape while the body drags along the wall: orange
+      // sparks at the contact point and a short friction rasp, throttled so a
+      // long slide reads as a continuous scrape instead of a burst per frame.
+      state.scrapeTimer -= dt;
+      if (Math.abs(car.speed) > 6 && headOn < 0.7 && state.scrapeTimer <= 0) {
+        const sx = car.x - nx * 1.4;
+        const sz = car.z - nz * 1.4;
+        state.particles.burst(sx, 0.8, sz, 5, 0xffc233, 3, 0.45);
+        state.particles.burst(sx, 0.5, sz, 3, 0xfff2b0, 2, 0.3);
+        audio.scrape();
+        state.scrapeTimer = 0.12;
+      }
     }
     car.x = Math.max(-310, Math.min(310, car.x));
     car.z = Math.max(-310, Math.min(460, car.z));
