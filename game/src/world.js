@@ -430,8 +430,8 @@ export function stepWorld(state, dt, input, camera, audio, hud) {
       state.raceRival = null;
     } else {
       rival.heading = Math.atan2(dx, dz);
-      rival.x += Math.sin(rival.heading) * 30 * dt;
-      rival.z += Math.cos(rival.heading) * 30 * dt;
+      rival.x += Math.sin(rival.heading) * 24 * dt;
+      rival.z += Math.cos(rival.heading) * 24 * dt;
       syncVehicleMesh(rival);
     }
   }

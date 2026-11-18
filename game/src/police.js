@@ -22,6 +22,7 @@ export function createPoliceCar(scene, x, z) {
   car.mesh.add(car.lightbar);
   car.mesh.position.set(x, 0, z);
   scene.add(car.mesh);
+  car.lost = 0; // seconds the player has stayed out of this cop's 70-unit sight radius
   return car;
 }
 
@@ -63,12 +64,17 @@ export function updatePolice(police, dt, wantedLevel, player, playerCar) {
     const dx = targetX - car.x;
     const dz = targetZ - car.z;
     const dist = Math.hypot(dx, dz) || 0.001;
+    // Leash: a cop that has lost sight for a while gives up the full-speed chase and
+    // drops back, so a player who genuinely pulls away stays away.
+    if (dist > 70) car.lost = (car.lost ?? 0) + dt;
+    else car.lost = 0;
+    const chaseTop = car.lost > 6 ? top * 0.4 : top;
     const wantHeading = Math.atan2(dx, dz);
     let dh = wantHeading - car.heading;
     while (dh > Math.PI) dh -= Math.PI * 2;
     while (dh < -Math.PI) dh += Math.PI * 2;
     car.heading += Math.max(-2.2 * dt, Math.min(2.2 * dt, dh * 3 * dt));
-    car.speed += ((dist > 12 ? top : top * 0.7) - car.speed) * dt * 0.8;
+    car.speed += ((dist > 12 ? chaseTop : chaseTop * 0.7) - car.speed) * dt * 0.8;
     car.x += Math.sin(car.heading) * car.speed * dt;
     car.z += Math.cos(car.heading) * car.speed * dt;
     if (dist < 4.5) {

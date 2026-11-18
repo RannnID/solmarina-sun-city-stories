@@ -52,20 +52,23 @@ export function stageShot(name, world, camera, audio, hud, stepWorldFn) {
     car.speed = 26;
     addCrime(state.wanted, 55, 'chase');
     startPolicePursuit(state.police, 3, car.x, car.z, state.random);
-    // Two police cars right behind the player, sirens on.
-    state.police.cars[0].x = -4; state.police.cars[0].z = 112; state.police.cars[0].heading = 0; state.police.cars[0].speed = 30;
-    if (state.police.cars[1]) { state.police.cars[1].x = 5; state.police.cars[1].z = 116; state.police.cars[1].heading = 0; state.police.cars[1].speed = 29; }
-    camera.setYaw(Math.PI);
+    // Two police cars right BEHIND the player (lower z = behind a car heading +z),
+    // sirens on. The camera sits behind the player too (yaw 0), so the chase reads as
+    // pursuit from behind, not a roadblock ahead.
+    state.police.cars[0].x = -4; state.police.cars[0].z = 68; state.police.cars[0].heading = 0; state.police.cars[0].speed = 30;
+    if (state.police.cars[1]) { state.police.cars[1].x = 5; state.police.cars[1].z = 64; state.police.cars[1].heading = 0; state.police.cars[1].speed = 29; }
+    camera.setYaw(0);
     for (let i = 0; i < 150; i += 1) stepWorldFn(state, STEP, SCRIPTED_INPUT, camera, audio, hud);
-    // Park both patrol cars just behind the player's car so the chase reads in one frame.
+    // Park both patrol cars just behind the player's car, between the camera and the
+    // player, so the chase reads in one frame: cops closing in from behind.
     const pc = state.player.inCar;
     if (state.police.cars[0]) {
-      state.police.cars[0].x = pc.x - 4; state.police.cars[0].z = pc.z - 11;
+      state.police.cars[0].x = pc.x - 4; state.police.cars[0].z = pc.z - 9;
       state.police.cars[0].heading = pc.heading; state.police.cars[0].speed = pc.speed * 0.9;
       syncVehicleMesh(state.police.cars[0]);
     }
     if (state.police.cars[1]) {
-      state.police.cars[1].x = pc.x + 6; state.police.cars[1].z = pc.z - 6;
+      state.police.cars[1].x = pc.x + 5; state.police.cars[1].z = pc.z - 6;
       state.police.cars[1].heading = pc.heading; state.police.cars[1].speed = pc.speed * 0.85;
       syncVehicleMesh(state.police.cars[1]);
     }
@@ -116,6 +119,21 @@ export function stageShot(name, world, camera, audio, hud, stepWorldFn) {
     // Camera northwest of the player, looking southeast at the stash and the enemies.
     camera.setYaw(Math.PI * 0.25);
     for (let i = 0; i < 60; i += 1) stepWorldFn(state, STEP, IDLE_INPUT, camera, audio, hud);
+    // Restage: line all four Vultures up in a lateral arc across the stash, at the same
+    // depth from the camera, so every one of them is in frame (the random ±5.5 spawn
+    // used to hide one behind the others / out of frame).
+    {
+      const cx = 240; const cz = 240;
+      const lateral = [0.7071, -0.7071]; // camera view dir is (0.7071, 0.7071)
+      const offsets = [-6, -2, 2, 6];
+      state.combat.enemies.forEach((e, i) => {
+        if (!e.alive) return;
+        const o = offsets[i % offsets.length];
+        e.x = cx + lateral[0] * o;
+        e.z = cz + lateral[1] * o;
+        e.mesh.position.set(e.x, 0, e.z);
+      });
+    }
     return {
       mode: 'mission',
       dialog: { name: CHARACTERS.kade.name, text: 'You took my van, Vale. Now you take my money? Come and try, little driver.' },

@@ -20,16 +20,19 @@ export function updateWantedLevel(wanted, dt, visibleToPolice) {
   if (visibleToPolice) {
     wanted.seen += dt;
     wanted.hidden = 0;
+    // Even while seen, a long chase cools slowly — the heat never freezes mid-pursuit.
+    wanted.heat = Math.max(0, wanted.heat - WANTED.decayVisible * dt);
   } else {
     wanted.hidden += dt;
     wanted.seen = 0;
     wanted.heat = Math.max(0, wanted.heat - WANTED.decay * dt * (wanted.hidden > 8 ? 3 : 1));
-    if (wanted.heat < 4) wanted.level = 0;
-    else if (wanted.heat < 20) wanted.level = Math.min(wanted.level, 1);
-    else if (wanted.heat < 40) wanted.level = Math.min(wanted.level, 2);
-    else if (wanted.heat < 60) wanted.level = Math.min(wanted.level, 3);
-    else if (wanted.heat < 80) wanted.level = Math.min(wanted.level, 4);
   }
+  // Level can only fall as heat falls, in both branches.
+  if (wanted.heat < 4) wanted.level = 0;
+  else if (wanted.heat < 20) wanted.level = Math.min(wanted.level, 1);
+  else if (wanted.heat < 40) wanted.level = Math.min(wanted.level, 2);
+  else if (wanted.heat < 60) wanted.level = Math.min(wanted.level, 3);
+  else if (wanted.heat < 80) wanted.level = Math.min(wanted.level, 4);
   return wanted.level;
 }
 

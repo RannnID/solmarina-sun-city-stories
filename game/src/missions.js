@@ -28,7 +28,7 @@ const MISSIONS = [
   {
     reward: 1000,
     steps: [
-      { kind: 'escape', label: 'Lose the police — stay out of sight until the stars fade', wanted: 2 },
+      { kind: 'escape', label: 'Lose the police — stay out of sight until the stars fade, or reach the hideout', wanted: 2 },
       { kind: 'goto', x: HIDEOUT.x, z: HIDEOUT.z, radius: 12, label: 'Reach the hideout on Coral Row' },
     ],
   },
@@ -166,7 +166,10 @@ export function updateMissionStep(missions, ctx, dt) {
       if (dist < step.radius && (!step.inCar || ctx.inCar)) return 'step-done';
       break;
     case 'escape':
+      // Lose the police (stars fade) OR reach the hideout while still wanted — the
+      // hideout is a safe house, so arriving there ends the chase by design.
       if (ctx.wanted === 0) return 'step-done';
+      if (Math.hypot(ctx.x - HIDEOUT.x, ctx.z - HIDEOUT.z) < 12) return 'step-done';
       break;
     case 'deliver': {
       const point = step.points[missions.delivered];
@@ -180,7 +183,8 @@ export function updateMissionStep(missions, ctx, dt) {
       if (ctx.enemiesLeft === 0 && missions.stepStarted) return 'step-done';
       break;
     case 'race':
-      if (dist < step.radius) return 'step-done';
+      // A race is a car race: arriving on foot does not count.
+      if (dist < step.radius && ctx.inCar) return 'step-done';
       break;
     case 'collect':
       if (missions.collected >= step.count) return 'step-done';

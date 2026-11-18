@@ -33,9 +33,15 @@ export const WEAPONS = {
 
 export const WANTED = {
   decay: 0.8,
+  // Heat still cools slowly while the police can see the player: a chase that drags on
+  // eventually fades instead of freezing forever (mission 3 was unwinnable in the van
+  // because heat froze at ~41 while cops glued to it).
+  decayVisible: 0.35,
   bustRadius: 3.2,
   maxCops: [0, 2, 3, 4, 6, 8],
-  copSpeed: [0, 30, 33, 36, 39, 42],
+  // Cops must stay a threat, but the slowest mission car (the van, top 28) has to be
+  // able to outrun a level-2 pursuit: cop top speed stays below the van's at levels 1-2.
+  copSpeed: [0, 24, 25, 29, 33, 37],
 };
 
 export const MISSION_COUNT = 8;
