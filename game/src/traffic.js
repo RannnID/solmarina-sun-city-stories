@@ -19,7 +19,7 @@ export function createTraffic(scene, random, count) {
     car.parked = false;
     car.mesh = createVehicleMesh(type);
     car.mesh.position.set(car.x, 0, car.z);
-    car.mesh.rotation.y = car.heading;
+    car.mesh.rotation.y = car.heading - Math.PI / 2;
     scene.add(car.mesh);
     cars.push(car);
   }

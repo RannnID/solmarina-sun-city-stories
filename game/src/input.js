@@ -59,6 +59,17 @@ export function createInput(canvas) {
     takeMouse() { const d = { dx: mouseDX, dy: mouseDY }; mouseDX = 0; mouseDY = 0; return d; },
     firing() { return mouseDown; },
     takeWeaponKey() { const k = weaponKey; weaponKey = 0; return k; },
-    takeActions() { const taken = actions; actions = 0; return taken; },
+    /** Take only the flagged bits, leaving the rest queued (the loop takes pause/mute here,
+        the world takes interact/jump/punch/reload inside its own step). */
+    takeActions(mask) {
+      if (mask === undefined) {
+        const taken = actions;
+        actions = 0;
+        return taken;
+      }
+      const taken = actions & mask;
+      actions &= ~mask;
+      return taken;
+    },
   };
 }

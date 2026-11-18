@@ -47,10 +47,11 @@ export function createWorld(scene, random) {
   parkedTypes.forEach((type, i) => {
     const road = CITY.roadAt(1 + (i % 7));
     const pos = -200 + i * 55;
-    const car = createVehicle(type, road + 5, pos, Math.PI / 2);
+    // Parked along a north-south road: heading 0 drives along the road, not into buildings.
+    const car = createVehicle(type, road + 5, pos, 0);
     car.mesh = createVehicleMesh(type);
     car.mesh.position.set(car.x, 0, car.z);
-    car.mesh.rotation.y = car.heading;
+    car.mesh.rotation.y = car.heading - Math.PI / 2;
     scene.add(car.mesh);
     parked.push(car);
   });
@@ -123,10 +124,10 @@ export function applySave(state, save) {
   state.ammo = save.ammo ?? { pistol: 24, smg: 64 };
   state.ownedCars = [];
   for (const type of save.ownedCars ?? []) {
-    const car = createVehicle(type, GARAGE.x + 10, GARAGE.z + 8, Math.PI / 2);
+    const car = createVehicle(type, GARAGE.x, GARAGE.z + 14, 0);
     car.mesh = createVehicleMesh(type);
     car.mesh.position.set(car.x, 0, car.z);
-    car.mesh.rotation.y = car.heading;
+    car.mesh.rotation.y = car.heading - Math.PI / 2;
     car.owned = true;
     state.scene.add(car.mesh);
     state.parked.push(car);
@@ -177,7 +178,7 @@ export function setupStep(state, step) {
     const van = createVehicle('van', PIER.x + 6, PIER.z - 6, Math.PI);
     van.mesh = createVehicleMesh('van', 0xffffff);
     van.mesh.position.set(van.x, 0, van.z);
-    van.mesh.rotation.y = van.heading;
+    van.mesh.rotation.y = van.heading - Math.PI / 2;
     state.scene.add(van.mesh);
     state.parked.push(van);
   }
@@ -272,10 +273,10 @@ export function buyShopItem(state, index) {
     if (!state.weaponsOwned.includes(item.key)) state.weaponsOwned.push(item.key);
     state.ammo[item.key] = (state.ammo[item.key] ?? 0) + WEAPONS[item.key].ammo * 2;
   } else {
-    const car = createVehicle(item.key, GARAGE.x + 10, GARAGE.z + 8, Math.PI / 2);
+    const car = createVehicle(item.key, GARAGE.x, GARAGE.z + 14, 0);
     car.mesh = createVehicleMesh(item.key);
     car.mesh.position.set(car.x, 0, car.z);
-    car.mesh.rotation.y = car.heading;
+    car.mesh.rotation.y = car.heading - Math.PI / 2;
     car.owned = true;
     state.scene.add(car.mesh);
     state.parked.push(car);
@@ -375,7 +376,7 @@ export function stepWorld(state, dt, input, camera, audio, hud) {
   }
   updateCombatTimers(state.combat, dt);
   if (input.firing() && state.weapon !== 'fists' && !p.inCar) {
-    if ((state.ammo[state.weapon] ?? 0) > 0) {
+    if ((state.ammo[state.weapon] ?? 0) > 0 && state.combat.cooldown <= 0) {
       state.ammo[state.weapon] -= 1;
       audio.shoot();
       const hit = shootWeapon(state.combat, camera.threeCamera, state.weapon, p, (enemy, point) => {

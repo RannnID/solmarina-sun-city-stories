@@ -77,6 +77,7 @@ const screens = createScreens({
     audio.unlock();
     startNewGame(world);
     screen = SCREEN_PLAY;
+    screens.show(SCREEN_PLAY);
     hud.toast('Mission 1 — THE VAN JOB', 3);
     announce('New game. Mission 1: steal a car and drive to the pier.');
   },
@@ -85,9 +86,10 @@ const screens = createScreens({
     const save = loadSave();
     if (save) applySave(world, save);
     screen = SCREEN_PLAY;
+    screens.show(SCREEN_PLAY);
     announce('Continued your save.');
   },
-  resume() { screen = SCREEN_PLAY; },
+  resume() { screen = SCREEN_PLAY; screens.show(SCREEN_PLAY); },
   quitToTitle() {
     persist();
     screen = SCREEN_TITLE;
@@ -97,6 +99,7 @@ const screens = createScreens({
     audio.unlock();
     startNewGame(world);
     screen = SCREEN_PLAY;
+    screens.show(SCREEN_PLAY);
   },
 });
 
@@ -161,11 +164,11 @@ function runGame() {
     accumulator += Math.min((now - last) / 1000, MAX_FRAME);
     last = now;
 
-    const actions = input.takeActions();
+    const actions = input.takeActions(ACTION_PAUSE | ACTION_MUTE);
     if (actions & ACTION_MUTE) audio.setMuted(!audio.isMuted());
     if (actions & ACTION_PAUSE) {
       if (screen === SCREEN_PLAY) { screen = SCREEN_PAUSED; screens.showPause(saveState()); persist(); }
-      else if (screen === SCREEN_PAUSED) { screen = SCREEN_PLAY; }
+      else if (screen === SCREEN_PAUSED) { screen = SCREEN_PLAY; screens.show(SCREEN_PLAY); }
     }
     if (screen === SCREEN_TITLE || screen === SCREEN_OVER) {
       // Idle world behind the title: traffic and pedestrians keep moving.
@@ -230,3 +233,6 @@ function runGame() {
 
 if (shot) runShot(shot);
 else runGame();
+
+// Debug handle for automated playtests (read-only state inspection from the test driver).
+window.__solmarina = { world, get screen() { return screen; } };

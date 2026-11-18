@@ -5,7 +5,7 @@
 import { STEP } from './config.js';
 import { setupStep } from './world.js';
 import { currentStep, startMission } from './missions.js';
-import { createVehicle, createVehicleMesh } from './vehicles.js';
+import { createVehicle, createVehicleMesh, syncVehicleMesh } from './vehicles.js';
 import { addCrime } from './wanted.js';
 import { startPolicePursuit } from './police.js';
 import { CHARACTERS } from './story.js';
@@ -30,7 +30,7 @@ function putPlayerInCar(state, type, x, z, heading) {
   const car = createVehicle(type, x, z, heading);
   car.mesh = createVehicleMesh(type);
   car.mesh.position.set(x, 0, z);
-  car.mesh.rotation.y = heading;
+  car.mesh.rotation.y = heading - Math.PI / 2;
   state.scene.add(car.mesh);
   state.player.inCar = car;
   state.player.mesh.visible = false;
@@ -62,10 +62,12 @@ export function stageShot(name, world, camera, audio, hud, stepWorldFn) {
     if (state.police.cars[0]) {
       state.police.cars[0].x = pc.x - 4; state.police.cars[0].z = pc.z - 11;
       state.police.cars[0].heading = pc.heading; state.police.cars[0].speed = pc.speed * 0.9;
+      syncVehicleMesh(state.police.cars[0]);
     }
     if (state.police.cars[1]) {
       state.police.cars[1].x = pc.x + 6; state.police.cars[1].z = pc.z - 6;
       state.police.cars[1].heading = pc.heading; state.police.cars[1].speed = pc.speed * 0.85;
+      syncVehicleMesh(state.police.cars[1]);
     }
     return { mode: 'chase', dialog: null };
   }
@@ -82,7 +84,7 @@ export function stageShot(name, world, camera, audio, hud, stepWorldFn) {
     const near = createVehicle('sedan', 12, 115, Math.PI / 2, 0x2a9d8f);
     near.mesh = createVehicleMesh('sedan', 0x2a9d8f);
     near.mesh.position.set(near.x, 0, near.z);
-    near.mesh.rotation.y = near.heading;
+    near.mesh.rotation.y = near.heading - Math.PI / 2;
     state.scene.add(near.mesh);
     state.parked.push(near);
     const pedSpots = [[16, 108], [2, 126], [20, 122]];

@@ -3,7 +3,7 @@
 // defeat enemies, or beat a race timer. Completing a mission pays cash and unlocks the next.
 import { MISSION_BRIEFS, MISSION_DIALOG, MISSION_DONE_LINES } from './story.js';
 
-export const GARAGE = { x: 30, z: 90 };
+export const GARAGE = { x: 66, z: 90 };
 export const PIER = { x: -120, z: 330 };
 export const HIDEOUT = { x: -180, z: -120 };
 export const STASH = { x: 240, z: 240 };
@@ -70,9 +70,9 @@ const MISSIONS = [
 ];
 
 export const PACKAGE_SPOTS = [
-  { x: 150, z: -150 }, { x: -210, z: 30 }, { x: 90, z: 210 }, { x: -60, z: -210 },
-  { x: 210, z: -90 }, { x: -150, z: 180 }, { x: 30, z: -60 }, { x: -240, z: -180 },
-  { x: 180, z: 150 }, { x: -30, z: 270 },
+  { x: 150, z: -180 }, { x: -210, z: 60 }, { x: 90, z: 240 }, { x: -60, z: -180 },
+  { x: 210, z: -60 }, { x: -150, z: 180 }, { x: 30, z: -60 }, { x: -240, z: -180 },
+  { x: 180, z: 120 }, { x: -30, z: 240 },
 ];
 
 export function createMissions() {

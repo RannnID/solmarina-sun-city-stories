@@ -78,7 +78,8 @@ export function driveVehicle(car, dt, throttle, steerInput, handbrake) {
 export function syncVehicleMesh(car) {
   if (!car.mesh) return;
   car.mesh.position.set(car.x, 0, car.z);
-  car.mesh.rotation.y = car.heading;
+  // The model's front is its local +x; the heading is the movement direction, 90° off.
+  car.mesh.rotation.y = car.heading - Math.PI / 2;
   const spin = car.speed * 0.016;
   for (const wheel of car.mesh.userData.wheels) wheel.rotation.z -= spin;
 }
