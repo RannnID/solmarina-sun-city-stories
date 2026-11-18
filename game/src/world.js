@@ -450,8 +450,12 @@ export function stepWorld(state, dt, input, camera, audio, hud) {
       enemiesLeft: enemiesAlive(state.combat),
       time: state.missions.timer,
     };
+    const doneStep = currentStep(state.missions);
     const result = updateMissionStep(state.missions, ctx, dt);
     if (result === 'step-done') {
+      // Escaping to the hideout is a clean getaway: the safe house clears the heat.
+      // (On the heat-decay path the wanted level is already 0, so this is a no-op.)
+      if (doneStep && doneStep.kind === 'escape') clearWanted(state.wanted);
       const next = advanceStep(state.missions);
       if (next === 'mission-done') {
         const reward = completeMission(state.missions);
