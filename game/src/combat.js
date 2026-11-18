@@ -51,18 +51,55 @@ export function shootWeapon(combat, camera, weaponKey, player, onHit) {
   combat.raycaster.far = def.range;
   const meshes = combat.enemies.filter((e) => e.alive).map((e) => e.mesh);
   const hits = combat.raycaster.intersectObjects(meshes, true);
-  if (hits.length === 0) return null;
-  let obj = hits[0].object;
-  while (obj.parent && obj.parent !== combat.scene) obj = obj.parent;
-  const enemy = combat.enemies.find((e) => e.mesh === obj);
-  if (!enemy) return null;
-  enemy.health -= def.damage;
+  if (hits.length > 0) {
+    let obj = hits[0].object;
+    while (obj.parent && obj.parent !== combat.scene) obj = obj.parent;
+    const enemy = combat.enemies.find((e) => e.mesh === obj);
+    if (enemy) return applyHit(enemy, hits[0].point, onHit, def.damage);
+  }
+  // Aim assist: the ray runs from the camera down to the look target
+  // (player + 1.4y), so past the player it keeps descending and an enemy a
+  // few units ahead only grazes it — whether the shot lands then depends on
+  // the camera pitch left over from the last orbit. If the ray misses
+  // outright, pull the shot onto the nearest enemy inside a small horizontal
+  // cone (6 deg) and within range: a near miss still counts, a wide miss
+  // does not. Damage and range are unchanged; only the hit test forgives.
+  const assisted = aimAssistTarget(combat, origin, dir, def.range);
+  if (!assisted) return null;
+  return applyHit(assisted, new THREE.Vector3(assisted.x, 1.2, assisted.z), onHit, def.damage);
+}
+
+function applyHit(enemy, point, onHit, damage) {
+  enemy.health -= damage;
   if (enemy.health <= 0) {
     enemy.alive = false;
     enemy.mesh.visible = false;
   }
-  if (onHit) onHit(enemy, hits[0].point);
+  if (onHit) onHit(enemy, point);
   return enemy;
+}
+
+// Nearest alive enemy inside a horizontal cone around the shot direction.
+// Measured in the XZ plane on purpose: the pitch of the camera ray is an
+// artifact of the chase camera, the player's left/right aim is not.
+function aimAssistTarget(combat, origin, dir, range) {
+  const fLen = Math.hypot(dir.x, dir.z);
+  if (fLen < 0.001) return null;
+  const nx = dir.x / fLen;
+  const nz = dir.z / fLen;
+  const maxCos = Math.cos((6 * Math.PI) / 180);
+  let best = null;
+  let bestCos = maxCos;
+  for (const e of combat.enemies) {
+    if (!e.alive) continue;
+    const dx = e.x - origin.x;
+    const dz = e.z - origin.z;
+    const d = Math.hypot(dx, dz);
+    if (d > range || d < 0.5) continue;
+    const cos = (dx * nx + dz * nz) / d;
+    if (cos > bestCos) { bestCos = cos; best = e; }
+  }
+  return best;
 }
 
 // Punch: hits the nearest enemy or pedestrian within arm's reach in front of the player.

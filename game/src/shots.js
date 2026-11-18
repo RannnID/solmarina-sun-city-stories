@@ -63,19 +63,21 @@ export function stageShot(name, world, camera, audio, hud, stepWorldFn) {
     // player, so the chase reads in one frame: cops closing in from behind.
     // (The camera snap sits ~10.5 units behind the player, so a cop parked 9+
     // units behind the player sits ~2 units from the lens and renders as a
-    // cropped black blob. Parked 4.6/5.6 behind the player they sit 5–6 units
-    // from the lens, fully in frame; pulled in laterally and yawed a touch so
-    // the white door slab and the roof light bar read from the chase camera
-    // instead of being cropped by the frame edges or the minimap.)
+    // cropped black blob. Parked 4.0/5.0 behind the player they sit 5–6 units
+    // from the lens, fully in frame. The chase camera looks along +z, so
+    // world +x is screen-left: the screen-left cop is pulled toward the
+    // centre so its flank clears the minimap in the bottom-left corner, and
+    // both are yawed a touch more so the white door slab and the roof light
+    // bar read from the chase camera instead of being cropped by the edges.)
     const pc = state.player.inCar;
     if (state.police.cars[0]) {
-      state.police.cars[0].x = pc.x - 2.7; state.police.cars[0].z = pc.z - 4.6;
-      state.police.cars[0].heading = pc.heading - 0.12; state.police.cars[0].speed = pc.speed * 0.9;
+      state.police.cars[0].x = pc.x - 1.7; state.police.cars[0].z = pc.z - 4.0;
+      state.police.cars[0].heading = pc.heading - 0.16; state.police.cars[0].speed = pc.speed * 0.9;
       syncVehicleMesh(state.police.cars[0]);
     }
     if (state.police.cars[1]) {
-      state.police.cars[1].x = pc.x + 2.7; state.police.cars[1].z = pc.z - 5.6;
-      state.police.cars[1].heading = pc.heading + 0.12; state.police.cars[1].speed = pc.speed * 0.85;
+      state.police.cars[1].x = pc.x + 2.0; state.police.cars[1].z = pc.z - 5.0;
+      state.police.cars[1].heading = pc.heading + 0.16; state.police.cars[1].speed = pc.speed * 0.85;
       syncVehicleMesh(state.police.cars[1]);
     }
     return { mode: 'chase', dialog: null };

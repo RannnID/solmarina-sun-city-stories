@@ -14,6 +14,7 @@ import { createHud } from './hud.js';
 import { createMinimap } from './minimap.js';
 import { createScreens, SCREEN_TITLE, SCREEN_PLAY, SCREEN_PAUSED, SCREEN_OVER } from './screens.js';
 import { createWorld, stepWorld, startNewGame, applySave, dialogActive, currentDialogLine, missionsDoneCount, packagesFound, currentWaypoint, minimapState, nearestCarPrompt, garagePrompt, EVENT_WASTED, EVENT_BUSTED, EVENT_STORY_DONE } from './world.js';
+import { spawnEnemies } from './combat.js';
 import { stageShot } from './shots.js';
 import { loadSave, saveGame, hasSave } from './save.js';
 import { CHARACTERS } from './story.js';
@@ -235,4 +236,6 @@ if (shot) runShot(shot);
 else runGame();
 
 // Debug handle for automated playtests (read-only state inspection from the test driver).
-window.__solmarina = { world, get screen() { return screen; } };
+// camera (yaw control) and spawnEnemy (place a test Vulture) exist so the playtest can
+// prove aim assist deterministically; neither is reachable from normal play.
+window.__solmarina = { world, camera, spawnEnemy: (x, z) => spawnEnemies(world.combat, [{ x, z }], 'vulture'), get screen() { return screen; } };

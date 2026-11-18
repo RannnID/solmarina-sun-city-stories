@@ -116,12 +116,14 @@ export function createAudio() {
     missionDone() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, 0.22, 'triangle', 0.22), i * 110)); },
     wantedUp() { blip(220, 0.2, 'sawtooth', 0.2); setTimeout(() => blip(180, 0.25, 'sawtooth', 0.2), 130); },
     crash() { blip(70, 0.25, 'square', 0.3); },
-    scrape() {
-      // Short friction rasp for a wall scrape: filtered noise, quieter and
-      // shorter than a gunshot, throttled by the caller so a long slide reads
-      // as a continuous scrape instead of one blast per frame.
+    scrape(intensity = 0.5) {
+      // Friction rasp for a wall scrape: filtered noise, always quieter than
+      // a gunshot (0.5) but the same length at a full slide (0.12s), so the
+      // scrape and the shot sit in one consistent sound world. Louder and
+      // longer the faster the slide; the caller passes the slide intensity.
       if (!ensure() || muted || ctx.state !== 'running') return;
-      const len = ctx.sampleRate * 0.09;
+      const slide = Math.max(0, Math.min(1, intensity));
+      const len = ctx.sampleRate * (0.09 + 0.03 * slide);
       const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
       const data = buffer.getChannelData(0);
       for (let i = 0; i < len; i += 1) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
@@ -129,9 +131,9 @@ export function createAudio() {
       src.buffer = buffer;
       const filter = ctx.createBiquadFilter();
       filter.type = 'bandpass';
-      filter.frequency.value = 900;
+      filter.frequency.value = 900 + 300 * slide;
       const gain = ctx.createGain();
-      gain.gain.value = 0.22;
+      gain.gain.value = 0.14 + 0.14 * slide;
       src.connect(filter);
       filter.connect(gain);
       gain.connect(master);

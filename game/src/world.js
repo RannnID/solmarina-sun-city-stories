@@ -348,12 +348,17 @@ export function stepWorld(state, dt, input, camera, audio, hud) {
       // long slide reads as a continuous scrape instead of a burst per frame.
       state.scrapeTimer -= dt;
       if (Math.abs(car.speed) > 6 && headOn < 0.7 && state.scrapeTimer <= 0) {
+        // Scrape feedback scales with slide speed: a fast slide throws more
+        // sparks and rasps more often, a slow drag is sparse and quiet, so
+        // the scrape reads as continuous at any speed instead of a fixed
+        // burst per frame (or a silent slide at low speed).
+        const slide = Math.min(1, Math.abs(car.speed) / 28);
         const sx = car.x - nx * 1.4;
         const sz = car.z - nz * 1.4;
-        state.particles.burst(sx, 0.8, sz, 5, 0xffc233, 3, 0.45);
-        state.particles.burst(sx, 0.5, sz, 3, 0xfff2b0, 2, 0.3);
-        audio.scrape();
-        state.scrapeTimer = 0.12;
+        state.particles.burst(sx, 0.8, sz, 3 + Math.round(4 * slide), 0xffc233, 3, 0.45);
+        state.particles.burst(sx, 0.5, sz, 2 + Math.round(2 * slide), 0xfff2b0, 2, 0.3);
+        audio.scrape(slide);
+        state.scrapeTimer = 0.16 - 0.08 * slide;
       }
     }
     car.x = Math.max(-310, Math.min(310, car.x));

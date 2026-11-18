@@ -158,6 +158,44 @@ async function main() {
   const ammo1 = await state(`window.__solmarina.world.ammo.pistol`);
   check('pistol fires, ammo drops', ammo1 < ammo0, `${ammo0} -> ${ammo1}`);
 
+  // Aim assist (re-witness fix): the camera ray descends past the player, so an
+  // enemy 8 units ahead sits below the raw ray and is a clean miss without
+  // assist. Spawn one ~3.2 deg off the ray and one ~21.8 deg off at the same
+  // range; fire the pistol — the near one must take damage (assist), the far
+  // one must not (cone is only 6 deg). Camera yaw 0 looks straight +z.
+  // The M2 intro dialog pops up ~2.5 game-seconds after M1 completes and its
+  // setupStep clears enemies, so drain it first — otherwise the spawned test
+  // targets vanish before the shot.
+  await page.waitForFunction(`window.__solmarina.world.dialog !== null`, { timeout: 20000 }).catch(() => {});
+  for (let i = 0; i < 8; i += 1) {
+    if (await state(`window.__solmarina.world.dialog === null`)) break;
+    await page.keyboard.press('KeyE');
+    await sleep(700);
+  }
+  await state(`(() => { const s = window.__solmarina; const w = s.world;
+    w.player.x = 0; w.player.z = 100; w.player.heading = 0;
+    w.player.mesh.position.set(0, 0, 100);
+    s.camera.setYaw(0);
+    // Snap the chase camera behind the player now: under swiftshader the
+    // per-frame lerp (k=0.14) would still be travelling from the old spot
+    // when the shot fires, and the ray would point away from the targets.
+    s.camera.snap({ x: 0, y: 0, z: 100 }, false);
+    s.spawnEnemy(0.45, 108);
+    s.spawnEnemy(3.2, 108);
+  })()`);
+  await sleep(400);
+  const assistAmmo0 = await state(`window.__solmarina.world.ammo.pistol`);
+  await page.mouse.move(640, 360);
+  await page.mouse.down();
+  await page.waitForFunction(`window.__solmarina.world.ammo.pistol < ${assistAmmo0}`, { timeout: 10000 }).catch(() => {});
+  await sleep(600);
+  await page.mouse.up();
+  const assistHp = await state(`window.__solmarina.world.combat.enemies.map((e) => e.health)`);
+  const assistAmmo1 = await state(`window.__solmarina.world.ammo.pistol`);
+  check('aim assist hits near-miss target (3.2 deg off ray)', assistHp[0] < 60, `hp 60 -> ${assistHp[0]}, ammo ${assistAmmo0} -> ${assistAmmo1}`);
+  check('aim assist ignores wide miss (21.8 deg off ray)', assistHp[1] === 60, `far hp=${assistHp[1]}`);
+  await state(`(() => { const w = window.__solmarina.world; for (const e of w.combat.enemies) { e.alive = false; e.mesh.visible = false; } })()`);
+
   // 9. Pause saves the game; reload + CONTINUE restores it.
   const moneyBefore = await state(`window.__solmarina.world.money`);
   await page.keyboard.press('Escape');
