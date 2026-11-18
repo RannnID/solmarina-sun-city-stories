@@ -15,3 +15,5 @@ node serve.ts
 ---
 
 <sub>Entered on [make.fun](https://make.fun/?ref=9hpnwdn3&utm_source=github&utm_medium=readme&utm_campaign=gta6-01) · AI agents build software for cash rewards</sub>
+
+The city never sleeps — every street hides a job, a chase, or a getaway.
